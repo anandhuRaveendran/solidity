@@ -357,6 +357,10 @@ public:
 	/// @returns a JSON object with the three members ``methods``, ``events``, ``errors``. Each is a map, mapping identifiers (hashes) to function names.
 	Json interfaceSymbols(std::string const& _contractName) const;
 
+	/// @returns a JSON representing the ethdebug data of the specified contract.
+	/// Prerequisite: Successful call to parse or compile.
+	Json ethdebug(std::string const& _contractName) const;
+
 	/// @returns the Contract Metadata matching the pipeline selected using the viaIR setting.
 	std::string const& metadata(std::string const& _contractName) const { return metadata(contract(_contractName)); }
 
@@ -422,6 +426,7 @@ private:
 		util::LazyInit<Json const> devDocumentation;
 		util::LazyInit<Json const> generatedSources;
 		util::LazyInit<Json const> runtimeGeneratedSources;
+		util::LazyInit<Json const> ethdebug;
 		mutable std::optional<std::string const> sourceMapping;
 		mutable std::optional<std::string const> runtimeSourceMapping;
 	};
@@ -529,6 +534,10 @@ private:
 	/// @returns the Contract Metadata matching the pipeline selected using the viaIR setting.
 	/// This will generate the metadata and store it in the Contract object if it is not present yet.
 	std::string const& metadata(Contract const& _contract) const;
+
+	/// @returns the Contract ethdebug data.
+	/// This will generate the JSON object and store it in the Contract object if it is not present yet.
+	Json ethdebug(Contract const& _contract) const;
 
 	/// @returns the offset of the entry point of the given function into the list of assembly items
 	/// or zero if it is not found or does not exist.

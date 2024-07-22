@@ -180,7 +180,7 @@ bool hashMatchesContent(std::string const& _hash, std::string const& _content)
 
 bool isArtifactRequested(Json const& _outputSelection, std::string const& _artifact, bool _wildcardMatchesExperimental)
 {
-	static std::set<std::string> experimental{"ir", "irAst", "irOptimized", "irOptimizedAst", "yulCFGJson"};
+	static std::set<std::string> experimental{"ir", "irAst", "irOptimized", "irOptimizedAst", "yulCFGJson", "ethdebug"};
 	for (auto const& selectedArtifactJson: _outputSelection)
 	{
 		std::string const& selectedArtifact = selectedArtifactJson.get<std::string>();
@@ -268,7 +268,7 @@ bool isBinaryRequested(Json const& _outputSelection)
 	static std::vector<std::string> const outputsThatRequireBinaries = std::vector<std::string>{
 		"*",
 		"ir", "irAst", "irOptimized", "irOptimizedAst", "yulCFGJson",
-		"evm.gasEstimates", "evm.legacyAssembly", "evm.assembly"
+		"evm.gasEstimates", "evm.legacyAssembly", "evm.assembly", "ethdebug"
 	} + evmObjectComponents("bytecode") + evmObjectComponents("deployedBytecode");
 
 	for (auto const& fileRequests: _outputSelection)
@@ -295,6 +295,21 @@ bool isEvmBytecodeRequested(Json const& _outputSelection)
 			for (auto const& output: outputsThatRequireEvmBinaries)
 				if (isArtifactRequested(requests, output, false))
 					return true;
+	return false;
+}
+
+/// @returns true if ethdebug was requested.
+bool isEthdebugRequested(Json const& _outputSelection)
+{
+	if (!_outputSelection.is_object())
+		return false;
+
+	for (auto const& fileRequests: _outputSelection)
+		for (auto const& requests: fileRequests)
+			for (auto const& request: requests)
+				if (request == "ethdebug")
+					return true;
+
 	return false;
 }
 
@@ -1175,6 +1190,36 @@ std::variant<StandardCompiler::InputsAndSettings, Json> StandardCompiler::parseI
 		ret.modelCheckerSettings.timeout = modelCheckerSettings["timeout"].get<Json::number_unsigned_t>();
 	}
 
+	if ((ret.debugInfoSelection.has_value() && ret.debugInfoSelection->ethdebug) || isEthdebugRequested(ret.outputSelection))
+	{
+		if (ret.language != "Solidity" && ret.language != "Yul")
+			return formatFatalError(Error::Type::FatalError, "'ethdebug' is only supported for languages 'Solidity' and 'Yul'.");
+	}
+
+	if (isEthdebugRequested(ret.outputSelection))
+	{
+		if (ret.language == "Solidity" && !ret.viaIR)
+			return formatFatalError(Error::Type::FatalError, "'ethdebug' can only be selected as output, if 'viaIR' was set.");
+
+		if (!ret.debugInfoSelection.has_value())
+		{
+			ret.debugInfoSelection = DebugInfoSelection::Default();
+			ret.debugInfoSelection->enable("ethdebug");
+		}
+		else
+		{
+			if (!ret.debugInfoSelection->ethdebug && ret.language == "Solidity")
+				return formatFatalError(Error::Type::FatalError, "'ethdebug' needs to be enabled in 'settings.debug.debugInfo', if 'ethdebug' was selected as output.");
+		}
+	}
+
+	if (
+		ret.debugInfoSelection.has_value() && ret.debugInfoSelection->ethdebug && ret.language == "Solidity" &&
+			irOutputSelection(ret.outputSelection) == CompilerStack::IROutputSelection::None &&
+			!isEthdebugRequested(ret.outputSelection)
+	)
+		return formatFatalError(Error::Type::FatalError, "'settings.debug.debugInfo' can only include 'ethdebug', if output 'ir', 'irOptimized' and/or 'ethdebug' was selected.");
+
 	return {std::move(ret)};
 }
 
@@ -1433,8 +1478,8 @@ Json StandardCompiler::compileSolidity(StandardCompiler::InputsAndSettings _inpu
 
 	Json output;
 
-	if (errors.size() > 0)
-	output["errors"] = std::move(errors);
+	if (!errors.empty())
+		output["errors"] = std::move(errors);
 
 	if (!compilerStack.unhandledSMTLib2Queries().empty())
 		for (std::string const& query: compilerStack.unhandledSMTLib2Queries())
@@ -1478,6 +1523,10 @@ Json StandardCompiler::compileSolidity(StandardCompiler::InputsAndSettings _inpu
 			contractData["userdoc"] = compilerStack.natspecUser(contractName);
 		if (isArtifactRequested(_inputsAndSettings.outputSelection, file, name, "devdoc", wildcardMatchesExperimental))
 			contractData["devdoc"] = compilerStack.natspecDev(contractName);
+
+		// ethdebug
+		if (compilationSuccess && isArtifactRequested(_inputsAndSettings.outputSelection, file, name, "ethdebug", wildcardMatchesExperimental))
+			contractData["ethdebug"] = compilerStack.ethdebug(contractName);
 
 		// IR
 		if (compilationSuccess && isArtifactRequested(_inputsAndSettings.outputSelection, file, name, "ir", wildcardMatchesExperimental))
@@ -1703,6 +1752,9 @@ Json StandardCompiler::compileYul(InputsAndSettings _inputsAndSettings)
 		output["contracts"][sourceName][contractName]["evm"]["assembly"] = object.assembly->assemblyString(stack.debugInfoSelection());
 	if (isArtifactRequested(_inputsAndSettings.outputSelection, sourceName, contractName, "yulCFGJson", wildcardMatchesExperimental))
 		output["contracts"][sourceName][contractName]["yulCFGJson"] = stack.cfgJson();
+
+	if (isEthdebugRequested(_inputsAndSettings.outputSelection))
+		output["contracts"][sourceName][contractName]["ethdebug"] = object.ethdebug;
 
 	return output;
 }
