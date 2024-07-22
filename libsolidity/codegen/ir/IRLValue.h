@@ -55,6 +55,7 @@ struct IRLValue
 				return std::get<std::string>(offset);
 		}
 	};
+	struct TransientStorage : public Storage {};
 	struct Memory
 	{
 		std::string const address;
@@ -64,7 +65,7 @@ struct IRLValue
 	{
 		std::vector<std::optional<IRLValue>> components;
 	};
-	std::variant<Stack, Immutable, Storage, Memory, Tuple> kind;
+	std::variant<Stack, Immutable, Storage, TransientStorage, Memory, Tuple> kind;
 };
 
 }

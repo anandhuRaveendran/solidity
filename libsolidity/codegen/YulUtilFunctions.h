@@ -24,6 +24,7 @@
 #include <liblangutil/EVMVersion.h>
 
 #include <libsolidity/ast/Types.h>
+#include <libsolidity/ast/AST.h>
 #include <libsolidity/codegen/MultiUseYulFunctionCollector.h>
 
 #include <libsolidity/interface/DebugSettings.h>
@@ -42,6 +43,7 @@ class ArrayType;
 class MappingType;
 class IntegerType;
 class StructType;
+class VariableDeclaration;
 
 /**
  * Component that can generate various useful Yul functions.
@@ -349,8 +351,17 @@ public:
 	/// @returns a function that reads a type from storage.
 	/// @param _splitFunctionTypes if false, returns the address and function signature in a
 	/// single variable.
-	std::string readFromStorage(Type const& _type, size_t _offset, bool _splitFunctionTypes);
-	std::string readFromStorageDynamic(Type const& _type, bool _splitFunctionTypes);
+	std::string readFromStorage(
+		Type const& _type,
+		size_t _offset,
+		bool _splitFunctionTypes,
+		VariableDeclaration::Location _location = VariableDeclaration::Location::Unspecified
+	);
+	std::string readFromStorageDynamic(
+		Type const& _type,
+		bool _splitFunctionTypes,
+		VariableDeclaration::Location _location = VariableDeclaration::Location::Unspecified
+	);
 
 	/// @returns a function that reads a value type from memory. Performs cleanup.
 	/// signature: (addr) -> value
@@ -376,7 +387,8 @@ public:
 	std::string updateStorageValueFunction(
 		Type const& _fromType,
 		Type const& _toType,
-		std::optional<unsigned> const& _offset = std::optional<unsigned>()
+		std::optional<unsigned> const& _offset = std::optional<unsigned>(),
+		VariableDeclaration::Location _location = VariableDeclaration::Location::Unspecified
 	);
 
 	/// Returns the name of a function that will write the given value to
@@ -573,8 +585,13 @@ private:
 	/// @param _splitFunctionTypes if false, returns the address and function signature in a
 	/// single variable.
 	/// @param _offset if provided, read from static offset, otherwise offset is a parameter of the Yul function.
-	std::string readFromStorageValueType(Type const& _type, std::optional<size_t> _offset, bool _splitFunctionTypes);
-
+	/// @param _location if provided, indicated whether we're reading from storage our transient storage.
+	std::string readFromStorageValueType(
+		Type const& _type,
+		std::optional<size_t> _offset,
+		bool _splitFunctionTypes,
+		VariableDeclaration::Location _location = VariableDeclaration::Location::Unspecified
+	);
 	/// @returns a function that reads a reference type from storage to memory (performing a deep copy).
 	std::string readFromStorageReferenceType(Type const& _type);
 

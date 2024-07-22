@@ -834,7 +834,6 @@ std::string IRGenerator::initStateVariables(ContractDefinition const& _contract)
 	IRGeneratorForStatements generator{m_context, m_utils, m_optimiserSettings};
 	for (VariableDeclaration const* variable: _contract.stateVariables())
 	{
-		solUnimplementedAssert(variable->referenceLocation() != VariableDeclaration::Location::Transient, "Transient storage variables not supported.");
 		if (!variable->isConstant())
 			generator.initializeStateVar(*variable);
 	}

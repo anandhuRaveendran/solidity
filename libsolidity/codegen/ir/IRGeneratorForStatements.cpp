@@ -274,15 +274,21 @@ void IRGeneratorForStatements::initializeStateVar(VariableDeclaration const& _va
 
 		_varDecl.value()->accept(*this);
 
-		writeToLValue(
-			_varDecl.immutable() ?
-			IRLValue{*_varDecl.annotation().type, IRLValue::Immutable{&_varDecl}} :
-			IRLValue{*_varDecl.annotation().type, IRLValue::Storage{
+		IRLValue irlValue = [&]() {
+			if (_varDecl.immutable())
+				return IRLValue{*_varDecl.annotation().type, IRLValue::Immutable{&_varDecl}};
+			if (_varDecl.referenceLocation() == VariableDeclaration::Transient)
+				return IRLValue{*_varDecl.annotation().type, IRLValue::TransientStorage{
+					toCompactHexWithPrefix(m_context.storageLocationOfStateVariable(_varDecl).first),
+					m_context.storageLocationOfStateVariable(_varDecl).second
+				}};
+			return IRLValue{*_varDecl.annotation().type, IRLValue::Storage{
 				toCompactHexWithPrefix(m_context.storageLocationOfStateVariable(_varDecl).first),
 				m_context.storageLocationOfStateVariable(_varDecl).second
-			}},
-			*_varDecl.value()
-		);
+			}};
+		}();
+
+		writeToLValue(irlValue, *_varDecl.value());
 	}
 	catch (langutil::UnimplementedFeatureError const& _error)
 	{
@@ -375,15 +381,6 @@ std::string IRGeneratorForStatements::constantValueFunction(VariableDeclaration 
 void IRGeneratorForStatements::endVisit(VariableDeclarationStatement const& _varDeclStatement)
 {
 	setLocation(_varDeclStatement);
-
-	auto static notTransient = [](std::shared_ptr<VariableDeclaration> const& _varDeclaration) {
-		return (_varDeclaration ? _varDeclaration->referenceLocation() != VariableDeclaration::Location::Transient : true);
-	};
-
-	solUnimplementedAssert(
-		ranges::all_of(_varDeclStatement.declarations(), notTransient),
-		"Transient storage variables are not supported."
-	);
 
 	if (Expression const* expression = _varDeclStatement.initialValue())
 	{
@@ -2558,6 +2555,14 @@ void IRGeneratorForStatements::handleVariableReference(
 			*_variable.annotation().type,
 			IRLValue::Stack{m_context.localVariable(_variable)}
 		});
+	else if (m_context.isStateVariable(_variable) && _variable.referenceLocation() == VariableDeclaration::Location::Transient)
+		setLValue(_referencingExpression, IRLValue{
+			*_variable.annotation().type,
+			IRLValue::TransientStorage{
+				toCompactHexWithPrefix(m_context.storageLocationOfStateVariable(_variable).first),
+				m_context.storageLocationOfStateVariable(_variable).second
+			}
+		});
 	else if (m_context.isStateVariable(_variable))
 		setLValue(_referencingExpression, IRLValue{
 			*_variable.annotation().type,
@@ -3079,7 +3084,23 @@ void IRGeneratorForStatements::writeToLValue(IRLValue const& _lvalue, IRVariable
 					offsetArgument <<
 					_value.commaSeparatedListPrefixed() <<
 					")\n";
+			},
+			[&](IRLValue::TransientStorage const& _transientStorage) {
+				std::string offsetArgument;
+				std::optional<unsigned> offsetStatic;
 
+				std::visit(GenericVisitor{
+					[&](unsigned _offset) { offsetStatic = _offset; },
+					[&](std::string const& _offset) { offsetArgument = ", " + _offset; }
+				}, _transientStorage.offset);
+
+				appendCode() <<
+					m_utils.updateStorageValueFunction(_value.type(), _lvalue.type, offsetStatic, VariableDeclaration::Location::Transient) <<
+					"(" <<
+					_transientStorage.slot <<
+					offsetArgument <<
+					_value.commaSeparatedListPrefixed() <<
+					")\n";
 			},
 			[&](IRLValue::Memory const& _memory) {
 				if (_lvalue.type.isValueType())
@@ -3169,6 +3190,24 @@ IRVariable IRGeneratorForStatements::readFromLValue(IRLValue const& _lvalue)
 					m_utils.readFromStorage(_lvalue.type, std::get<unsigned>(_storage.offset), true) <<
 					"(" <<
 					_storage.slot <<
+					")\n";
+		},
+		[&](IRLValue::TransientStorage const& _transientStorage) {
+			if (!_lvalue.type.isValueType())
+				define(result) << _transientStorage.slot << "\n";
+			else if (std::holds_alternative<std::string>(_transientStorage.offset))
+				define(result) <<
+					m_utils.readFromStorageDynamic(_lvalue.type, true, VariableDeclaration::Location::Transient) <<
+					"(" <<
+					_transientStorage.slot <<
+					", " <<
+					std::get<std::string>(_transientStorage.offset) <<
+					")\n";
+			else
+				define(result) <<
+					m_utils.readFromStorage(_lvalue.type, std::get<unsigned>(_transientStorage.offset), true, VariableDeclaration::Location::Transient) <<
+					"(" <<
+					_transientStorage.slot <<
 					")\n";
 		},
 		[&](IRLValue::Memory const& _memory) {
