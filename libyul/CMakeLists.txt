@@ -65,6 +65,8 @@ add_library(yul
 	backends/evm/NoOutputAssembly.cpp
 	backends/evm/OptimizedEVMCodeTransform.cpp
 	backends/evm/OptimizedEVMCodeTransform.h
+	backends/evm/SSACFGValidator.h
+	backends/evm/SSACFGValidator.cpp
 	backends/evm/SSAControlFlowGraph.h
 	backends/evm/SSAControlFlowGraphBuilder.cpp
 	backends/evm/SSAControlFlowGraphBuilder.h
@@ -192,6 +194,8 @@ add_library(yul
 	optimiser/VarDeclInitializer.h
 	optimiser/VarNameCleaner.cpp
 	optimiser/VarNameCleaner.h
+		backends/evm/SSACFGValidator.cpp
+		backends/evm/SSACFGValidator.h
 )
 
 target_link_libraries(yul PUBLIC evmasm solutil langutil smtutil fmt::fmt-header-only)

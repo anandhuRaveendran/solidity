@@ -206,6 +206,10 @@ public:
 		yulAssert(it->second.value < m_valueInfos.size());
 		return it->second;
 	}
+	ValueId getLiteral(u256 _value) const
+	{
+		return m_literals.at(_value);
+	}
 private:
 	std::deque<ValueInfo> m_valueInfos;
 	std::map<u256, ValueId> m_literals;

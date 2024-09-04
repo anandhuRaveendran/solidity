@@ -20,6 +20,7 @@
 
 #include <libyul/AsmAnalysis.h>
 #include <libyul/AsmAnalysisInfo.h>
+#include <libyul/backends/evm/SSACFGValidator.h>
 #include <libyul/backends/evm/SSAControlFlowGraphBuilder.h>
 #include <libyul/backends/evm/EthAssemblyAdapter.h>
 #include <libyul/backends/evm/EVMCodeTransform.h>
@@ -374,11 +375,13 @@ Json YulStack::cfgJson() const
 	// FIXME: we should not regenerate the cfg, but for now this is sufficient for testing purposes
 	auto exportCFGFromObject = [&](Object const& _object) -> Json {
 		// NOTE: The block Ids are reset for each object
+		auto& dialect = languageToDialect(m_language, m_evmVersion);
 		std::unique_ptr<ControlFlow> controlFlow = SSAControlFlowGraphBuilder::build(
 			*_object.analysisInfo.get(),
-			languageToDialect(m_language, m_evmVersion),
+			dialect,
 			_object.code()->root()
 		);
+		SSACFGValidator::validate(*controlFlow, _object.code()->root(), *_object.analysisInfo.get(), dialect);
 		YulControlFlowGraphExporter exporter(*controlFlow);
 		return exporter.run();
 	};
