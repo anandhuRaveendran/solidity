@@ -415,7 +415,9 @@ In case of an exception that reverts changes, already used up gas is not refunde
 Since EVM executors can choose to include a transaction or not,
 transaction senders cannot abuse the system by setting a low gas price.
 
-.. index:: ! storage, ! memory, ! stack
+.. index:: ! storage, ! memory, ! stack, ! transient storage
+
+.. _locations:
 
 Storage, Memory and the Stack
 =============================
@@ -431,6 +433,12 @@ comparatively costly to read, and even more to initialise and modify storage. Be
 you should minimize what you store in persistent storage to what the contract needs to run.
 Store data like derived calculations, caching, and aggregates outside of the contract.
 A contract can neither read nor write to any storage apart from its own.
+
+Similar to storage, there is another data area called **transient storage**, where the main difference
+is the fact that it is reset at the end of each transaction.
+The values stored in this data location persist only across function calls originating from the first call of the transaction.
+When the transaction ends, the transient storage is reset and the values stored there become unavailable to calls in subsequent transactions.
+Albeit that, the cost of reading and writing to transient storage is significantly lower than for storage.
 
 The second data area is called **memory**, of which a contract obtains
 a freshly cleared instance for each message call. Memory is linear and can be
