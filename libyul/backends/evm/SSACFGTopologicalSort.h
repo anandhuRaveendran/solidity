@@ -33,9 +33,8 @@ class ForwardSSACFGTopologicalSort
 public:
 	explicit ForwardSSACFGTopologicalSort(SSACFG const& _cfg);
 
-	std::vector<size_t> const& sortedBlocks() const;
 	std::vector<size_t> const& preOrder() const;
-	std::vector<size_t> const& reversedPostOrder() const;
+	std::vector<size_t> const& postOrder() const;
 	std::vector<size_t> const& maxSubtreePreOrder() const;
 	std::set<size_t> const& backEdgeTargets() const;
 	std::vector<std::set<size_t>> const& predecessors() const;
@@ -48,10 +47,10 @@ private:
 
 	SSACFG const& m_cfg;
 
-	size_t m_currentNode {0};
 	std::vector<char> m_explored{};
-	std::vector<size_t> m_reversedPostOrder{};
+	std::vector<size_t> m_postOrder{};
 	std::vector<size_t> m_preOrder{};
+	std::vector<size_t> m_preOrderPerBlock{};
 	std::vector<size_t> m_maxSubtreePreOrder{};
 	std::vector<std::tuple<size_t, size_t>> m_potentialBackEdges{};
 	std::set<size_t> m_backEdgeTargets{};

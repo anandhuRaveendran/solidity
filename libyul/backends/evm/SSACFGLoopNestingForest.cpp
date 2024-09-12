@@ -26,7 +26,7 @@ SSACFGLoopNestingForest::SSACFGLoopNestingForest(ForwardSSACFGTopologicalSort co
 	m_vertexPartition(m_cfg.numBlocks()),
 	m_loopParents(m_cfg.numBlocks(), std::numeric_limits<size_t>::max())
 {
-	auto dfsOrder = m_sort.reversedPostOrder();
+	auto dfsOrder = m_sort.preOrder();
 	// we go from inner-most to outer-most
 	std::reverse(dfsOrder.begin(), dfsOrder.end());
 

@@ -42,10 +42,7 @@ public:
 
 private:
 
-	void runDagDfs(
-		SSACFG::BlockId _blockId,
-		std::vector<std::uint8_t>& _processed
-	);
+	void runDagDfs();
 	void runLoopTreeDfs(size_t _loopHeader);
 
 	SSACFG const& m_cfg;
