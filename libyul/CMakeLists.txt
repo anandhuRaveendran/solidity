@@ -194,8 +194,6 @@ add_library(yul
 	optimiser/VarDeclInitializer.h
 	optimiser/VarNameCleaner.cpp
 	optimiser/VarNameCleaner.h
-		backends/evm/SSACFGValidator.cpp
-		backends/evm/SSACFGValidator.h
 )
 
 target_link_libraries(yul PUBLIC evmasm solutil langutil smtutil fmt::fmt-header-only)

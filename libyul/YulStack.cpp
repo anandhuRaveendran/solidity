@@ -377,11 +377,11 @@ Json YulStack::cfgJson() const
 		// NOTE: The block Ids are reset for each object
 		auto& dialect = languageToDialect(m_language, m_evmVersion);
 		std::unique_ptr<ControlFlow> controlFlow = SSAControlFlowGraphBuilder::build(
-			*_object.analysisInfo.get(),
+			*_object.analysisInfo,
 			dialect,
 			_object.code()->root()
 		);
-		SSACFGValidator::validate(*controlFlow, _object.code()->root(), *_object.analysisInfo.get(), dialect);
+		SSACFGValidator::validate(*controlFlow, _object.code()->root(), *_object.analysisInfo, dialect);
 		YulControlFlowGraphExporter exporter(*controlFlow);
 		return exporter.run();
 	};
