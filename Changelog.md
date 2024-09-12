@@ -5,7 +5,7 @@ Language Features:
 
 Compiler Features:
  * Code Generator: Transient storage value type state variables are now supported by the legacy pipeline.
-
+ * SMTChecker: Z3 is now a runtime dependency, not a build dependency (except for emscripten build).
 
 Bugfixes:
  * SMTChecker: Fix SMT logic error when assigning to an array of addresses.
