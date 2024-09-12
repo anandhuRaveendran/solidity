@@ -120,7 +120,6 @@ bool SSACFGValidator::consumeStatement(Statement const& _statement)
 			// todo this will be different for EOF
 			if(auto cond = consumeUnaryExpression(*_switch.expression))
 			{
-				// todo consolidation of values in branches is missing
 				auto const validateGhostEq = [this, cond](SSACFG::Operation const& _operation) {
 					yulAssert(std::holds_alternative<SSACFG::BuiltinCall>(_operation.kind));
 					yulAssert(&std::get<SSACFG::BuiltinCall>(_operation.kind).builtin.get() == m_context.dialect.equalityFunction());
@@ -146,6 +145,9 @@ bool SSACFGValidator::consumeStatement(Statement const& _statement)
 						auto const& jumpBack = expectUnconditionalJump();
 						yulAssert(!afterSwitch || *afterSwitch == jumpBack.target);
 						afterSwitch = jumpBack.target;
+						auto nonZeroBranchVariableValues = applyPhis(m_currentBlock, *afterSwitch);
+						for (auto&& [var, value]: nonZeroBranchVariableValues)
+							yulAssert(nonZeroBranchVariableValues.at(var) == value);
 					}
 					m_currentBlock = exit.get().zero;
 					m_currentOperation = 0;
@@ -166,6 +168,9 @@ bool SSACFGValidator::consumeStatement(Statement const& _statement)
 					auto const& jumpBack = expectUnconditionalJump();
 					yulAssert(!afterSwitch || *afterSwitch == jumpBack.target);
 					afterSwitch = jumpBack.target;
+					auto nonZeroBranchVariableValues = applyPhis(m_currentBlock, *afterSwitch);
+					for (auto&& [var, value]: nonZeroBranchVariableValues)
+						yulAssert(nonZeroBranchVariableValues.at(var) == value);
 				}
 
 				m_currentBlock = exit.get().zero;
@@ -175,16 +180,20 @@ bool SSACFGValidator::consumeStatement(Statement const& _statement)
 					auto const& jumpBack = expectUnconditionalJump();
 					yulAssert(!afterSwitch || *afterSwitch == jumpBack.target);
 					afterSwitch = jumpBack.target;
-					auto nonZeroBranchVariableValues = applyPhis(m_currentBlock, *afterSwitch);
-					m_currentVariableValues = nonZeroBranchVariableValues;
+					auto zeroBranchVariableValues = applyPhis(m_currentBlock, *afterSwitch);
+					m_currentVariableValues = zeroBranchVariableValues;
 					// consolidate the values in the zero branch with the values in the non-zero branch
-					for (auto&& [var, value]: nonZeroBranchVariableValues)
-						yulAssert(nonZeroBranchVariableValues.at(var) == value);
+					for (auto&& [var, value]: zeroBranchVariableValues)
+						yulAssert(zeroBranchVariableValues.at(var) == value);
 				}
+				else
+					yulAssert(!_switch.cases.empty(), "empty switch is forbidden, we need at least the default case");
 
+				// todo double check that this is actually sane and we always have an
+				//  after switch (consuming body of a case returning false could be a weird case)
+				yulAssert(afterSwitch);
 				m_currentBlock = *afterSwitch;
 				m_currentOperation = 0;
-				// m_currentVariableValues = zeroBranchVariableValues;
 				return true;
 			}
 			return false;
