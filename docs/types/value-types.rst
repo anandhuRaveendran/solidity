@@ -8,7 +8,7 @@ The following are called value types because their variables will always be pass
 are used as function arguments or in assignments.
 
 .. note::
-    Currently, :ref:`transient storage <transient-storage>`is only supported for value types.
+    Currently, :ref:`transient storage <transient-storage>` is only supported for value types.
 
 .. index:: ! bool, ! true, ! false
 

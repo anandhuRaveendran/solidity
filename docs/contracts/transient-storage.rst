@@ -44,7 +44,7 @@ which can be readily implemented with the opcodes as showcased next.
             locked = false;
         }
 
-        function claimGift() nonreentrant public {
+        function claimGift() nonReentrant public {
             require(address(this).balance >= 1 ether);
             require(!sentGifts[msg.sender]);
             (bool success, ) = msg.sender.call{value: 1 ether}("");
