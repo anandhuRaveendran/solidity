@@ -355,12 +355,12 @@ public:
 		Type const& _type,
 		size_t _offset,
 		bool _splitFunctionTypes,
-		VariableDeclaration::Location _location = VariableDeclaration::Location::Unspecified
+		VariableDeclaration::Location _location
 	);
 	std::string readFromStorageDynamic(
 		Type const& _type,
 		bool _splitFunctionTypes,
-		VariableDeclaration::Location _location = VariableDeclaration::Location::Unspecified
+		VariableDeclaration::Location _location
 	);
 
 	/// @returns a function that reads a value type from memory. Performs cleanup.
@@ -387,8 +387,8 @@ public:
 	std::string updateStorageValueFunction(
 		Type const& _fromType,
 		Type const& _toType,
-		std::optional<unsigned> const& _offset = std::optional<unsigned>(),
-		VariableDeclaration::Location _location = VariableDeclaration::Location::Unspecified
+		VariableDeclaration::Location _location,
+		std::optional<unsigned> const& _offset = std::optional<unsigned>()
 	);
 
 	/// Returns the name of a function that will write the given value to
@@ -590,7 +590,7 @@ private:
 		Type const& _type,
 		std::optional<size_t> _offset,
 		bool _splitFunctionTypes,
-		VariableDeclaration::Location _location = VariableDeclaration::Location::Unspecified
+		VariableDeclaration::Location _location
 	);
 	/// @returns a function that reads a reference type from storage to memory (performing a deep copy).
 	std::string readFromStorageReferenceType(Type const& _type);

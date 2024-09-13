@@ -1760,7 +1760,7 @@ std::string YulUtilFunctions::storageArrayPushFunction(ArrayType const& _type, T
 			("dataAreaFunction", arrayDataAreaFunction(_type))
 			("isByteArrayOrString", _type.isByteArrayOrString())
 			("indexAccess", storageArrayIndexAccessFunction(_type))
-			("storeValue", updateStorageValueFunction(*_fromType, *_type.baseType()))
+			("storeValue", updateStorageValueFunction(*_fromType, *_type.baseType(), VariableDeclaration::Location::Unspecified))
 			("maxArrayLength", (u256(1) << 64).str())
 			("shl", shiftLeftFunctionDynamic())
 			.render();
@@ -2015,7 +2015,7 @@ std::string YulUtilFunctions::copyArrayToStorageFunction(ArrayType const& _fromT
 			0,
 			_fromType.baseType()->stackItems().size()
 		));
-		templ("updateStorageValue", updateStorageValueFunction(*_fromType.baseType(), *_toType.baseType(), 0));
+		templ("updateStorageValue", updateStorageValueFunction(*_fromType.baseType(), *_toType.baseType(), VariableDeclaration::Location::Unspecified, 0));
 		templ("srcStride",
 			fromCalldata ?
 			std::to_string(_fromType.calldataStride()) :
@@ -2870,7 +2870,7 @@ std::string YulUtilFunctions::readFromStorageReferenceType(Type const& _type)
 		("memberValues", suffixedVariableNameList("memberValue_", 0, structMembers[i].type->stackItems().size()))
 		("memberMemoryOffset", structType.memoryOffsetOfMember(structMembers[i].name).str())
 		("memberSlotDiff",  memberSlotDiff.str())
-		("readFromStorage", readFromStorage(*structMembers[i].type, memberStorageOffset, true))
+		("readFromStorage", readFromStorage(*structMembers[i].type, memberStorageOffset, true, VariableDeclaration::Location::Unspecified))
 		("writeToMemory", writeToMemoryFunction(*structMembers[i].type))
 		.render();
 	}
@@ -2904,8 +2904,8 @@ std::string YulUtilFunctions::readFromCalldata(Type const& _type)
 std::string YulUtilFunctions::updateStorageValueFunction(
 	Type const& _fromType,
 	Type const& _toType,
-	std::optional<unsigned> const& _offset,
-	VariableDeclaration::Location _location
+	VariableDeclaration::Location _location,
+	std::optional<unsigned> const& _offset
 )
 {
 	std::string const functionName =
@@ -3579,7 +3579,7 @@ std::string YulUtilFunctions::conversionFunction(Type const& _from, Type const& 
 					body = Whiskers(R"(
 						converted := <readFromStorage>(value)
 					)")
-					("readFromStorage", readFromStorage(toStructType, 0, true))
+					("readFromStorage", readFromStorage(toStructType, 0, true, VariableDeclaration::Location::Unspecified))
 					.render();
 				}
 			}
@@ -3709,7 +3709,7 @@ std::string YulUtilFunctions::bytesToFixedBytesConversionFunction(ArrayType cons
 			templ(
 				"extractValue",
 				_from.dataStoredIn(DataLocation::Storage) ?
-				readFromStorage(_to, 32 - _to.numBytes(), false) :
+				readFromStorage(_to, 32 - _to.numBytes(), false, VariableDeclaration::Location::Unspecified) :
 				readFromMemory(_to)
 			);
 		templ("shl", shiftLeftFunctionDynamic());
@@ -3813,7 +3813,7 @@ std::string YulUtilFunctions::copyStructToStorageFunction(StructType const& _fro
 				auto const& [srcSlotOffset, srcOffset] = _from.storageOffsetsOfMember(structMembers[i].name);
 				t("memberOffset", formatNumber(srcSlotOffset));
 				if (memberType.isValueType())
-					t("read", readFromStorageValueType(memberType, srcOffset, true));
+					t("read", readFromStorageValueType(memberType, srcOffset, true, VariableDeclaration::Location::Unspecified));
 				else
 					solAssert(srcOffset == 0, "");
 
@@ -3821,6 +3821,7 @@ std::string YulUtilFunctions::copyStructToStorageFunction(StructType const& _fro
 			t("updateStorageValue", updateStorageValueFunction(
 				memberType,
 				*toStructMembers[i].type,
+				VariableDeclaration::Location::Unspecified,
 				std::optional<unsigned>{offset}
 			));
 			memberParams[i]["updateMemberCall"] = t.render();
@@ -4339,7 +4340,7 @@ std::string YulUtilFunctions::storageSetToZeroFunction(Type const& _type)
 				}
 			)")
 			("functionName", functionName)
-			("store", updateStorageValueFunction(_type, _type))
+			("store", updateStorageValueFunction(_type, _type, VariableDeclaration::Location::Unspecified))
 			("values", suffixedVariableNameList("zero_", 0, _type.sizeOnStack()))
 			("zeroValue", zeroValueFunction(_type))
 			.render();
