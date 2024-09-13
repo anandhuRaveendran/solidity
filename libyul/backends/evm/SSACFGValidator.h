@@ -65,6 +65,7 @@ private:
 	SSACFG::BasicBlock::FunctionReturn const& expectFunctionReturn() const;
 	/// Applys the phi functions of @a _target assuming an entry from @a _source.
 	std::map<Scope::Variable const*, SSACFG::ValueId> applyPhis(SSACFG::BlockId _source, SSACFG::BlockId _target);
+	std::map<Scope::Variable const*, SSACFG::ValueId> consolidateVariables(SSACFG::BlockId _source1, SSACFG::BlockId _source2, SSACFG::BlockId _target);
 
 	Context const& m_context;
 	Scope* m_scope = nullptr;
