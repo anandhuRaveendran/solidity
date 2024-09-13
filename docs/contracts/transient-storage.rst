@@ -55,7 +55,63 @@ which can be readily implemented with the opcodes as showcased next.
         }
     }
 
-.. note::
-    Given the caveats mentioned in the specification of EIP-1153, utmost care is
-    recommended for more advanced use cases of transient storage to preserve
-    the composability of your smart contract.
+*********************************************************************
+Composability of Smart Contracts and the Caveats of Transient Storage
+*********************************************************************
+
+Given the caveats mentioned in the specification of EIP-1153,
+in order to preserve the composability of your smart contract,
+utmost care is recommended for more advanced use cases of transient storage.
+
+For smart contracts, composability is a very important design to achieve a self-contained behaviour,
+such that multiple calls into individual smart contracts can be composed to more complex applications.
+So far the EVM largely guaranteed composable behaviour, since multiple calls into a smart contract
+within a complex transaction are virtually indistinguishable from multiple calls to the contract
+stretched over several transactions. However, transient storage allows a violation to this principle
+and incorrect use may lead to complex bugs that only surface when used across several calls.
+
+Let's illustrate the problem with a simple example:
+
+.. code-block:: solidity
+
+    // SPDX-License-Identifier: GPL-3.0
+    pragma solidity ^0.8.27;
+
+    contract MulService {
+        uint transient multiplier;
+        function setMultiplier(uint mul) external {
+            multiplier = mul;
+        }
+
+        function multiply(uint value) external view returns (uint) {
+            return value * multiplier;
+        }
+    }
+
+If the example used memory or storage to store the multiplier, it would be fully composable.
+It would not matter whether you split the sequence into separate transactions or grouped them in some way.
+You would always get the same result. This enables use cases such as batching calls from multiple transactions
+together to reduce gas costs. Transient storage potentially breaks such use cases since composability can no longer be taken for granted.
+
+Note however, that the lack of composability is not an inherent property of transient storage.
+It could have been preserved if the rules for resetting its content were slightly adjusted.
+Currently the clearing happens for all contracts at the same time, when the transaction ends.
+If instead it was cleared for a contract as soon as no function belonging to it remained active
+on the call stack (which could mean multiple resets per transaction), the issue would disappear.
+In the example above it would mean clearing transient storage after each of the calls.
+
+As another example, since transient storage is constructed as a relatively cheap key-value store,
+a smart contract author may be tempted to use transient storage as a replacement for in-memory mappings
+without keeping track of the modified keys in the mapping and thereby without clearing the mapping
+at the end of the call. This, however, can easily lead to unexpected behaviour in complex transactions,
+in which values set by a previous call into the contract within the same transaction remain.
+
+The use of transient storage for reentrancy locks that are cleared at the end of the call frame
+into the contract, is safe. However, be sure to resist the temptation to save the 100 gas used
+for resetting the reentrancy lock, since failing to do so, will restrict your contract to
+only one call within a transaction, preventing its use in complex composed transactions,
+which have been a cornerstone for complex applications on chain.
+
+It is recommend to generally always clear transient storage completely at the end of a call
+into your smart contract to avoid these kinds of issues and to simplify
+the analysis of the behaviour of your contract within complex transactions.
